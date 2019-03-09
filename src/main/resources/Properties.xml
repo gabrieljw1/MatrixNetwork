@@ -1,0 +1,20 @@
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <comment>Global Constants</comment>
+    <entry key="RANDOM_WEIGHT_FLOOR">-1</entry>
+    <entry key="RANDOM_WEIGHT_CEIL">1</entry>
+    <entry key="VCONNECTION_SIZE">3</entry>
+    <entry key="FONT_SIZE">10</entry>
+    <entry key="NUMBER_DIAGNOSTIC_DATA_POINTS">3</entry>
+    <entry key="DEFAULT_NEURON_RADIUS">25</entry>
+    <entry key="DEFAULT_NEURON_COLOR">GREEN</entry>
+    <entry key="DEFAULT_CONNECTION_COLOR">BLACK</entry>
+    <entry key="TRAINING_IMAGE_WIDTH">28</entry>
+    <entry key="TRAINING_IMAGE_HEIGHT">28</entry>
+    <entry key="PATH_TO_TRAINING_IMAGES">"./src/main/resources/train-images.idx3-ubyte"</entry>
+    <entry key="PATH_TO_TRAINING_LABELS">"./src/main/resources/train-labels.idx1-ubyte"</entry>
+    <entry key="TRAINING_DATA_FRAME_WIDTH">300</entry>
+    <entry key="TRAINING_DATA_FRAME_HEIGHT">350</entry>
+    <entry key="DEFAULT_TRAINING_DATA_START">0</entry>
+    <entry key="VERBOSE">true</entry>
+</properties>
