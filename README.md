@@ -6,6 +6,10 @@ This repository is the version control hub for the java Matrix Network project. 
 
 ## Release History
 
+* 0.2.0
+    * Batch, epoch training support
+    * Efficiency increased
+    * Method documentation
 * 0.1.0
     * Working model, up to 75% accuracy with MNIST
     * All necessary programming and features

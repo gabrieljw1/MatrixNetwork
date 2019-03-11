@@ -125,6 +125,27 @@ public class MatrixUtil {
 		return returnArray;
 	}
 	
+	public static double[][][] add(double[][][] input1, double[][][] input2) {
+		if (input1.length != input2.length || input1[1].length != input2[1].length || input1[1][0].length != input2[1][0].length) {
+			System.out.println("Error in add.");
+			
+			return (double[][][]) null;
+		}
+		
+		
+		double[][][] returnArray = input1.clone();
+		
+		for (int i = 0; i < input1.length; i++) {
+			for (int j = 0; j < input1[i].length; j++) {
+				for (int k = 0; k < input1[i][j].length; k++) {
+					returnArray[i][j][k] = input1[i][j][k] + input2[i][j][k];
+				}
+			}
+		}
+		
+		return returnArray;
+	}
+	
 	public static double[] scalarMultiply(double[] matrix, double scale) {		
 		double[] returnArray = new double[matrix.length];
 		

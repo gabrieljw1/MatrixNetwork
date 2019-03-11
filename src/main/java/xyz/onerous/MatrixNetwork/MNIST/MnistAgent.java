@@ -1,12 +1,10 @@
 package xyz.onerous.MatrixNetwork.MNIST;
 
-import java.util.Arrays;
 import java.util.List;
 
 import xyz.onerous.MatrixNetwork.MatrixNetwork;
 import xyz.onerous.MatrixNetwork.ActivationType;
 import xyz.onerous.MatrixNetwork.LossType;
-import xyz.onerous.MatrixNetwork.MatrixNetwork;
 import xyz.onerous.MatrixNetwork.MNIST.MnistReader;
 import xyz.onerous.MatrixNetwork.util.ArrayUtil;
 
@@ -16,6 +14,9 @@ public class MnistAgent {
 	private List<int[][]> testImages;
 	private int[] testLabels;
 	
+	private double[][] imageData;
+	private double[][] testImageData;
+	
 	private MatrixNetwork matrixNetwork;
 	
 	private static final String imagesFilePath = "./src/main/resources/train-images.idx3-ubyte";
@@ -23,11 +24,11 @@ public class MnistAgent {
 	private static final String testImagesFilePath = "./src/main/resources/t10k-images.idx3-ubyte";
 	private static final String testLabelsFilePath = "./src/main/resources/t10k-labels.idx1-ubyte";
 	
-	private static final int lHidden = 2;
-	private static final int[] nHidden = new int[] { 500, 500 };
+	private static final int lHidden = 1;
+	private static final int[] nHidden = new int[] { 800 };
 	private static final int nOutput = 10;
 	
-	private static final double learningRate = 0.0005;
+	private static final double learningRate = 0.001;
 	private static final ActivationType activationType = ActivationType.Sigmoid;
 	private static final LossType lossType = LossType.CrossEntropy;
 	
@@ -43,21 +44,25 @@ public class MnistAgent {
 		int nInput = images.get(0).length * images.get(0)[0].length;
 		
 		this.matrixNetwork = new MatrixNetwork(nInput, nOutput, nHidden, lHidden, learningRate, activationType, lossType);
-		matrixNetwork.initialize();
+		
+		processImageData();
 	}
 	
-	private void performEpoch(int startIndex, int endIndex, int batchSize) {
-		if (startIndex < 0 || endIndex > images.size()) { return; }
+	private void processImageData() {
+		imageData = new double[images.size()][];
+		testImageData = new double[testImages.size()][];
 		
-		for (int i = startIndex; i < endIndex; i++) {
-			double[] standardizedInput = ArrayUtil.standardize( ArrayUtil.flattenArray(images.get(i)) );
-			
-			matrixNetwork.inputData(standardizedInput);
-			
-			System.out.println(i + ":: R:" + matrixNetwork.inputData(standardizedInput) + ", E:" + labels[i] + ". Cost: " + matrixNetwork.getOutputError(labels[i]));
-			
-			matrixNetwork.gradientDescent(labels[i], batchSize);
+		for (int i = 0; i < imageData.length; i++) {
+			imageData[i] = ArrayUtil.standardize( ArrayUtil.flattenArray(images.get(i)) );
 		}
+		
+		for (int i = 0; i < testImageData.length; i++) {
+			testImageData[i] = ArrayUtil.standardize( ArrayUtil.flattenArray(testImages.get(i)) );
+		}
+	}
+	
+	private void performEpoch(int batchSize) {
+		matrixNetwork.performEpoch(imageData, labels, batchSize);
 	}
 	
 	private double performTest(int startIndex, int endIndex) {
@@ -66,12 +71,10 @@ public class MnistAgent {
 		int correctCount = 0;
 		
 		for (int i = startIndex; i < endIndex; i++) {
-			double[] normalizedInput = ArrayUtil.standardize( ArrayUtil.flattenArray(testImages.get(i)) );
-			
-			int outputIndex = matrixNetwork.inputData(normalizedInput);
+			int outputIndex = matrixNetwork.inputDataAndPropagate(testImageData[i]);
 			
 			System.out.println("Begin test: " + i);
-			System.out.println("Network Gave: " + outputIndex + ", but supposed to be: " + labels[i]);
+			System.out.println("Network Gave: " + outputIndex + ", but supposed to be: " + testLabels[i]);
 			System.out.println("");
 			
 			if (outputIndex == testLabels[i]) { correctCount++; }
@@ -83,7 +86,7 @@ public class MnistAgent {
 	public static void main(String[] args) {
 		MnistAgent mnistAgent = new MnistAgent(imagesFilePath, labelsFilePath);
 		
-		mnistAgent.performEpoch(0, 10000, 1);
+		mnistAgent.performEpoch(50);
 		System.out.println("Got " + mnistAgent.performTest(0, 200) + "% Correct!");
 	}
 }

@@ -1,68 +1,92 @@
 package xyz.onerous.MatrixNetwork;
 
-import java.util.Arrays;
 import java.util.Random;
 
 import xyz.onerous.MatrixNetwork.ActivationType;
 import xyz.onerous.MatrixNetwork.LossType;
+import xyz.onerous.MatrixNetwork.util.ArrayUtil;
 import xyz.onerous.MatrixNetwork.util.MatrixUtil;
 
 /**
- * All neuron activations are locked between activation of 0 and 1
+ * A neural network using Matrix operations instead of thrice-nested for loops like my first network did.
+ * To be initialized by some outside 'Agent' (such as the MnistAgent, all network
+ * parameters are selected upon initialization such as the Activation Type (Sigmoid, TanH, etc.) and the Loss
+ * type (Cross Entropy, MSE, etc.).
+ * 
+ * Notes:
+ * 	- Neuron Activations [0, 1]
+ * 
+ * To-do:
+ * 	- //TODO: Translate TanH so that it fits on the interval [0,1]
+ * 	- //TODO: Graphics?
+ * 	- //TODO: Softmax support
+ * 
  * @author wongg19
- *
+ * @version 0.1.0
  */
 public class MatrixNetwork {
-	private int[] nLayer;
-	private int lTotal;
+	private int[] nPerLayer; //Number of neurons in each layer
+	private int numL; //Number of layers (including input, output) in network
 	
-	private double learningRate;
+	private double learningRate; //Learning rate of the network
 	
-	private ActivationType activationType;
-	private LossType lossType;
+	private ActivationType activationType; //Activation Type (Sigmoid, TanH, etc.)
+	private LossType lossType; //Loss Type (Cross Entropy, MSE, etc.)
 	
 	private double[][][] w; //Connection Weights
 	private double[][] b; //Neuron Biases
 	private double[][] z; //Neuron Weighted Inputs
 	private double[][] a; //Neuron Activations
 	
-	private double[][] δ; // δ
+	private double[][] δ; //Network error per neuron used for gradient descent
 	
-	private final double BIAS_INIT_CONSTANT = 0.0;
-	
+	private final double BIAS_INIT_CONSTANT = 0.0; //What biases should be initialized to
 	
 	public MatrixNetwork(int nInput, int nOutput, int[] nHidden, int lHidden, double learningRate, ActivationType activationType, LossType lossType) {
-		this.lTotal = lHidden + 2;
-
+		//Global all parameters
+		this.numL = lHidden + 2;
 		this.learningRate = learningRate;
-
 		this.activationType = activationType;
 		this.lossType = lossType;
+		this.nPerLayer = new int[numL];
+		this.nPerLayer[0] = nInput;
+		this.nPerLayer[numL - 1] = nOutput;
 
-		this.nLayer = new int[lTotal];
-
-		this.nLayer[0] = nInput;
-		this.nLayer[lTotal - 1] = nOutput;
-
-		for (int l = 1; l < lTotal - 1; l++) {
-			this.nLayer[l] = nHidden[l-1];
+		//Calculate nPerLayer for all hidden layers from the given array
+		for (int l = 1; l < numL - 1; l++) {
+			this.nPerLayer[l] = nHidden[l-1];
 		}
+		
+		initialize();
 	}
 	
-	public void initialize() {
-		int nOutput = nLayer[nLayer.length - 1];
-		
-		//
-		//Weights
-		//
-		w = new double[lTotal][][]; //Every layer will have weights but the first. weights[0] will be left empty. We will not initialize weights[0].
-		w[lTotal-1] = new double[nOutput][nLayer[lTotal-1-1]]; //lTotal-1-1 = weights in last hidden layer
+	/**
+	 * Create each array for every piece of data the network will need - weight, bias, error, activation, and
+	 * weighted input storage. This is necessary because java arrays need to be initialized before getting or
+	 * setting values.
+	 */
+	private void initialize() {		
+		w = new double[numL][][]; //Every layer will have weights but the first. weights[0] will be left empty. We will not initialize weights[0].
+		b = new double[numL][];
+		δ = new double[numL][];
+		a = new double[numL][];
+		z = new double[numL][];
 
-		for (int l = 1; l < lTotal - 1; l++) {
-			w[l] = new double[ nLayer[l] ][];
-
-			for (int n = 0; n < nLayer[l]; n++) {
-				w[l][n] = new double[ nLayer[l-1] ];
+		for (int l = 0; l < numL; l++) {
+			w[l] = new double[ nPerLayer[l] ][];
+			b[l] = new double[ nPerLayer[l] ];
+			δ[l] = new double[ nPerLayer[l] ];
+			a[l] = new double[ nPerLayer[l] ];
+			z[l] = new double[ nPerLayer[l] ];
+			
+			if (l != 0) {
+				for (int n = 0; n < nPerLayer[l]; n++) {
+					w[l][n] = new double[ nPerLayer[l-1] ];
+				}
+			} else {
+				for (int n = 0; n < nPerLayer[l]; n++) {
+					w[l][n] = new double[0];
+				}
 			}
 		}
 
@@ -70,108 +94,80 @@ public class MatrixNetwork {
 
 		switch (activationType) {
 		case Sigmoid:
-			for (int l = 1; l < lTotal; l++) {
-				for (int n = 0; n < nLayer[l]; n++) {
-					for (int p_n = 0; p_n < nLayer[l-1]; p_n++) {
-						w[l][n][p_n] = 2.0 * (random.nextDouble() - 0.5) * 4.0 * Math.sqrt(6.0 / ((double)nLayer[l-1]));
+			for (int l = 1; l < numL; l++) {
+				for (int n = 0; n < nPerLayer[l]; n++) {
+					b[l][n] = this.BIAS_INIT_CONSTANT;
+					for (int p_n = 0; p_n < nPerLayer[l-1]; p_n++) {
+						w[l][n][p_n] = 2.0 * (random.nextDouble() - 0.5) * 4.0 * Math.sqrt(6.0 / ((double)nPerLayer[l-1]));
 					}
 				}
 			}
 			break;
 		case ReLU: //Generate weights based on a normal distribution * sqrt(2/size of prev layer)
-			for (int l = 1; l < lTotal; l++) {
-				for (int n = 0; n < nLayer[l]; n++) {
-					for (int p_n = 0; p_n < nLayer[l-1]; p_n++) {
-						w[l][n][p_n] = random.nextGaussian() * Math.sqrt(2.0/(double)nLayer[l-1]);
+			for (int l = 1; l < numL; l++) {
+				for (int n = 0; n < nPerLayer[l]; n++) {
+					b[l][n] = this.BIAS_INIT_CONSTANT;
+					for (int p_n = 0; p_n < nPerLayer[l-1]; p_n++) {
+						w[l][n][p_n] = random.nextGaussian() * Math.sqrt(2.0/(double)nPerLayer[l-1]);
 					}
 				}
 			}
 			break;
-		//case Linear:
-			//	break;
 		case TanH:
-			for (int l = 1; l < lTotal; l++) {
-				for (int n = 0; n < nLayer[l]; n++) {
-					for (int p_n = 0; p_n < nLayer[l-1]; p_n++) {
-						w[l][n][p_n] = random.nextGaussian() * Math.sqrt(1.0/(double)nLayer[l-1]); //Xavier initialization
+			for (int l = 1; l < numL; l++) {
+				for (int n = 0; n < nPerLayer[l]; n++) {
+					b[l][n] = this.BIAS_INIT_CONSTANT;
+					for (int p_n = 0; p_n < nPerLayer[l-1]; p_n++) {
+						w[l][n][p_n] = random.nextGaussian() * Math.sqrt(1.0/(double)nPerLayer[l-1]); //Xavier initialization
 					}
 				}
 			}
 			break;
 		default:
-			for (int l = 1; l < lTotal; l++) {
-				for (int n = 0; n < nLayer[l]; n++) {
-					for (int p_n = 0; p_n < nLayer[l-1]; p_n++) {
-						w[l][n][p_n] = random.nextGaussian() * Math.sqrt(1.0/(double)nLayer[l-1]); //Xavier initialization
+			for (int l = 1; l < numL; l++) {
+				for (int n = 0; n < nPerLayer[l]; n++) {
+					b[l][n] = this.BIAS_INIT_CONSTANT;
+					for (int p_n = 0; p_n < nPerLayer[l-1]; p_n++) {
+						w[l][n][p_n] = random.nextGaussian() * Math.sqrt(1.0/(double)nPerLayer[l-1]); //Xavier initialization
 					}
 				}
 			}
 			break;
-		}
-		
-		
-		
-		//
-		//Biases and error
-		//
-		b = new double[lTotal][];
-		δ = new double[lTotal][];
-		
-		for (int l = 0; l < lTotal; l++) {
-			b[l] = new double[ nLayer[l] ];
-			δ[l] = new double[ nLayer[l] ];
-		}
-
-		switch (activationType) {
-		case ReLU:
-			for (int l = 0; l < lTotal; l++) {
-				for (int n = 0; n < nLayer[l]; n++) {
-					b[l][n] = this.BIAS_INIT_CONSTANT;
-				}
-			}
-			break;
-		case Sigmoid:
-			for (int l = 0; l < lTotal; l++) {
-				for (int n = 0; n < nLayer[l]; n++) {
-					b[l][n] = this.BIAS_INIT_CONSTANT;
-				}
-			}
-			break;
-		default:
-			for (int l = 0; l < lTotal; l++) {
-				for (int n = 0; n < nLayer[l]; n++) {
-					b[l][n] = this.BIAS_INIT_CONSTANT;
-				}
-			}
-			break;
-		}
-		
-		
-		
-		//
-		//Misc
-		//
-		a = new double[lTotal][];
-		z = new double[lTotal][];
-
-		for (int l = 0; l < lTotal; l++) {
-			a[l] = new double[nLayer[l]];
-			z[l] = new double[nLayer[l]];
 		}
 	}
 
-	public int inputData(double[] data) {
-		if (data.length != nLayer[0]) {
+	/**
+	 * Take an array of doubles and spread that across the input layer of the network
+	 * 
+	 * @param data Array of length number of input neurons in the network
+	 */
+	private void inputData(double[] data) {
+		if (data.length != nPerLayer[0]) {
 			System.out.println("Data length mismatch error");
 		}
 		
 		z[0] = data;
+	}
+	
+	/**
+	 * Take an array of doubles and spread that across the input layer of the network with the `inputData`
+	 * method, then propagate and return the output of the network.
+	 * 
+	 * @param data Array of length number of input neurons in the network
+	 * @return Network response (index of 'brightest' output neuron)
+	 */
+	public int inputDataAndPropagate(double[] data) {
+		inputData(data);
 		
 		propagate();
 		
 		return getDominantOutputIndex();
 	}
 	
+	/**
+	 * @param neuronZ Neuron weighted input
+	 * @return the activation function performed on some input value
+	 */
 	public double activate(double neuronZ) {
 		double neuronA;
 		
@@ -199,16 +195,53 @@ public class MatrixNetwork {
 		
 		return neuronA;
 	}
+	
+	/**
+	 * @param layerZ A layer (array) of neuron weighted inputs
+	 * @return the activation function performed on an entire layer (array) of neuron weighted inputs
+	 */
 	public double[] activateLayer(double[] layerZ) {
 		double[] layerA = new double[layerZ.length];
-		
-		for (int i = 0; i < layerA.length; i++) {
-			layerA[i] = activate(layerZ[i]);
+	
+		switch (activationType) {
+		case Sigmoid:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = 1.0 / (1.0 + Math.exp(-layerZ[i]));
+			}
+			break;
+		case ReLU:
+			for (int i = 0; i < layerA.length; i++) {
+				if (layerZ[i] >= 0) {
+					layerA[i] = layerZ[i];
+				} else {
+					layerA[i] = 0;
+				}
+			}
+			break;
+		case Linear:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = layerZ[i];
+			}
+			break;
+		case TanH:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = Math.tanh(layerZ[i]);
+			}
+			break;
+		default:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = 1.0 / (1.0 + Math.exp(-layerZ[i]));
+			}
+			break;
 		}
 		
 		return layerA;
 	}
 	
+	/**
+	 * @param neuronZ Neuron weighted input
+	 * @return the (derivative of) activation function performed on some input value
+	 */
 	public double activatePrime(double neuronZ) {
 		double neuronA;
 		
@@ -236,24 +269,62 @@ public class MatrixNetwork {
 		
 		return neuronA;
 	}
+	
+	/**
+	 * @param layerZ A layer (array) of neuron weighted inputs
+	 * @return the (derivative of) activation function performed on an entire layer (array) of neuron weighted inputs
+	 */
 	public double[] activateLayerPrime(double[] layerZ) {
 		double[] layerA = new double[layerZ.length];
 		
-		for (int i = 0; i < layerA.length; i++) {
-			layerA[i] = activatePrime(layerZ[i]);
+		switch (activationType) {
+		case Sigmoid:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = activate(layerZ[i]) * (1 - activate(layerZ[i]));
+			}
+			break;
+		case ReLU:
+			for (int i = 0; i < layerA.length; i++) {
+				if (layerZ[i] >= 0) {
+					layerA[i] = 1;
+				} else {
+					layerA[i] = 0;
+				}
+			}
+			break;
+		case Linear:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = 1;
+			}
+			break;
+		case TanH:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = Math.pow(Math.cosh(layerZ[i]), -2.0); //sech^2(x)
+			}
+			break;
+		default:
+			for (int i = 0; i < layerA.length; i++) {
+				layerA[i] = activate(layerZ[i]) * (1 - activate(layerZ[i]));
+			}
+			break;
 		}
 		
 		return layerA;
 	}
 	
+	/**
+	 * Find the 'brightest' output neuron in the network. This is what amounts to the network's output.
+	 * 
+	 * @return the index of the network output neuron
+	 */
 	public int getDominantOutputIndex() {
-		double maxValue = a[lTotal - 1][0];
+		double maxValue = a[numL - 1][0];
 		int maxValueAtIndex = 0;
 		
-		for (int n = 1; n < nLayer[lTotal - 1]; n++) {
-			if (a[lTotal - 1][n] > maxValue) {
+		for (int n = 1; n < nPerLayer[numL - 1]; n++) {
+			if (a[numL - 1][n] > maxValue) {
 				maxValueAtIndex = n;
-				maxValue = a[lTotal - 1][n];
+				maxValue = a[numL - 1][n];
 			}
 		}
 		
@@ -261,53 +332,63 @@ public class MatrixNetwork {
 	}
 	
 	/**
-	 * Also known as the network feed forward.
-	 * 
-	 * z(l)=w(l)a(l−1)+b(l)
+	 * Feed forward the input given by the input data all the way to the output layer through the weights and
+	 * hidden layer neurons (if any).
 	 */
 	public void propagate() {
 		//z will already be inside of the first layer array index
 		a[0] = activateLayer(z[0]);
 		
-		for (int l = 1; l < lTotal; l++) {
+		for (int l = 1; l < numL; l++) {
 			z[l] = MatrixUtil.add(MatrixUtil.multiply(w[l], a[l-1]), b[l]);
 			a[l] = activateLayer(z[l]);
 		}
 	}
 	
+	/**
+	 * Using an expected output versus the actual network output, calculate the error in the output layer
+	 * (the error is calculated using the desired loss function specified during network initialization).
+	 * Then, 'backpropagate' that error through the network to approximate the individual error for every
+	 * single network neuron. Finding the error for each neuron will allow the gradient descent function to find the weight and bias
+	 * changes necessary to make the network perform better.
+	 * 
+	 * For the output layer, error is defined as the hadamard product of the derivative of the loss function
+	 * and the activation of the previous layer's neurons.
+	 * 
+	 * For the non-output layers (also not the input layer, it does not have error), the error is given by
+	 * multiplying the matrix of the weights (between the current layer and the layer closer to the output)
+	 * by the matrix of the next layer's error and then taking the hadamard of that product and the current
+	 * layer activations. This algorithm starts at the second to last layer and then backwards, therefore
+	 * 'backpropagating'. 
+	 * 
+	 * @param expectedIndex The expected output of the network
+	 */
 	private void backPropagate(int expectedIndex) {
 		//CALCULATE OUTPUT LAYER FIRST
-		double[] expectedOutput = new double[nLayer[lTotal - 1]];
+		double[] expectedOutput = new double[nPerLayer[numL - 1]];
 		
-		for (int i = 0; i < expectedOutput.length; i++) {
-			if (i == expectedIndex) {
-				expectedOutput[i] = 1.0;
-			} else {
-				expectedOutput[i] = 0.0;
-			}
-		}
+		expectedOutput[expectedIndex] = 1.0;
 		
 		switch (lossType) {
 		case MeanSquaredError: //  (actual - predicted)^2 / n    so the deriv is    (2/n)(actual-predicted)
-			for (int i = 0; i < nLayer[lTotal - 1]; i++) {
-				δ[lTotal-1][i] = 0.5 * (a[lTotal - 1][i] - expectedOutput[i]);
+			for (int i = 0; i < nPerLayer[numL - 1]; i++) {
+				δ[numL-1][i] = 0.5 * (a[numL - 1][i] - expectedOutput[i]);
 			}
 			break;
 		case MeanAbsoluteError:
-			for (int i = 0; i < nLayer[lTotal - 1]; i++) {
-				if (a[lTotal - 1][i] > expectedOutput[i]) {
-					δ[lTotal-1][i] = +1.0;
-				} else if (a[lTotal - 1][i] < expectedOutput[i]) {
-					δ[lTotal-1][i] = -1.0;
+			for (int i = 0; i < nPerLayer[numL - 1]; i++) {
+				if (a[numL - 1][i] > expectedOutput[i]) {
+					δ[numL-1][i] = +1.0;
+				} else if (a[numL - 1][i] < expectedOutput[i]) {
+					δ[numL-1][i] = -1.0;
 				} else {
-					δ[lTotal-1][i] = +0.0;
+					δ[numL-1][i] = +0.0;
 				}
 			}
 			break;
 		case CrossEntropy:
-			for (int i = 0; i < nLayer[lTotal - 1]; i++) {
-				//δ[lTotal-1][i] = (a[lTotal - 1][i] - expectedOutput[i]) / ((a[lTotal - 1][i] * (1 - a[lTotal - 1][i])));
-				δ[lTotal-1][i] = (-expectedOutput[i]/a[lTotal - 1][i]) + (1.0 - expectedOutput[i])/(1.0 - a[lTotal - 1][i]);
+			for (int i = 0; i < nPerLayer[numL - 1]; i++) {
+				δ[numL-1][i] = (-expectedOutput[i]/a[numL - 1][i]) + (1.0 - expectedOutput[i])/(1.0 - a[numL - 1][i]);
 			}
 			break;
 		case BinaryCrossEntropy:
@@ -321,70 +402,179 @@ public class MatrixNetwork {
 		
 		//Up until now, only part of δ has been stored inside.
 		//We still have to hadamard the delCdelA with the derivative of the activation function for z.
-		δ[lTotal-1] = MatrixUtil.hadamard(δ[lTotal-1], activateLayerPrime(z[lTotal - 1]));
+		δ[numL-1] = MatrixUtil.hadamard(δ[numL-1], activateLayerPrime(z[numL - 1]));
 		
 		
 		//
 		//Calculate rest of network
 		//
-		for (int l = lTotal - 2; l > 0; l--) {
+		for (int l = numL - 2; l > 0; l--) {
 			δ[l] = MatrixUtil.hadamard(MatrixUtil.multiplyWithFirstTranspose(w[l+1], δ[l+1]), activateLayerPrime(z[l]));
 		}
 	}
 	
-	public void gradientDescent(int expectedIndex, int batchSize) { //Batch size needed to limit weight/bias changing over an entire batch
+	/**
+	 * Calculate the bias and weight deltas for each neuron using the previously calculated errors (see the
+	 * `backpropagate()` function). 
+	 * 
+	 * Weight deltas are given by multiplying the layer error by the activations of the previous layer
+	 * transposed then multiplying scalarly with the negaative learning rate. Bias deltas are given by
+	 * multiplying the layer error scalarly by the negative learning rate.
+	 * 
+	 * Deltas are not directly applied in case the network is being used in a batch context.
+	 * 
+	 * @param expectedIndex The expected network output
+	 * @return the bias and weight deltas
+	 */
+	private WeightBiasDeltaPackage gradientDescent(int expectedIndex) { //Batch size needed to limit weight/bias changing over an entire batch
 		backPropagate(expectedIndex);
 		
 		double[][][] deltaW = w.clone(); //Cloned so the dimensions are the same without having to re-init.
 		double[][] deltaB = b.clone();
 		
-		for (int l = lTotal - 1; l > 0; l--) {
-			deltaW[l] = MatrixUtil.scalarMultiply(MatrixUtil.multiplyWithSecondTranspose(δ[l], a[l-1]), -learningRate / (double)batchSize);
-			deltaB[l] = MatrixUtil.scalarMultiply(δ[l], -learningRate / (double)batchSize);
-			
-			w[l] = MatrixUtil.add(w[l], deltaW[l]);
-			b[l] = MatrixUtil.add(b[l], deltaB[l]);
+		for (int l = numL - 1; l > 0; l--) {
+			deltaW[l] = MatrixUtil.scalarMultiply(MatrixUtil.multiplyWithSecondTranspose(δ[l], a[l-1]), -learningRate);
+			deltaB[l] = MatrixUtil.scalarMultiply(δ[l], -learningRate);
+		}
+		
+		return new WeightBiasDeltaPackage(deltaW, deltaB);
+	}
+	
+	/**
+	 * Apply a given weight-bias delta package to the network.
+	 * 
+	 * @param deltaPackage The weight-bias delta package to be applied to the network
+	 */
+	public void applyDeltaPackage(WeightBiasDeltaPackage deltaPackage) {
+		for (int l = numL - 1; l > 0; l--) {
+			w[l] = MatrixUtil.add(w[l], deltaPackage.deltaW[l]);
+			b[l] = MatrixUtil.add(b[l], deltaPackage.deltaB[l]);
 		}
 	}
 	
+	/**
+	 * @param expectedIndex The expected output of the network
+	 * @return the total output layer error specified by the selected loss function.
+	 */
 	public double getOutputError(int expectedIndex) {
-		double[] expectedOutput = new double[nLayer[lTotal - 1]];
+		double[] expectedOutput = new double[nPerLayer[numL - 1]];
 		
-		for (int i = 0; i < expectedOutput.length; i++) {
-			if (i == expectedIndex) {
-				expectedOutput[i] = 1.0;
-			} else {
-				expectedOutput[i] = 0.0;
-			}
-		}
+		expectedOutput[expectedIndex] = 1.0;
 		
 		switch (lossType) {
 		case MeanSquaredError: //  (actual - predicted)^2 / n
 			double sumSquaredError = 0.0;
-			for (int i = 0; i < nLayer[lTotal - 1]; i++) {
-				sumSquaredError += Math.pow(a[lTotal - 1][i] - expectedOutput[i], 2.0);
+			for (int i = 0; i < nPerLayer[numL - 1]; i++) {
+				sumSquaredError += Math.pow(a[numL - 1][i] - expectedOutput[i], 2.0);
 			}
-			return sumSquaredError / (double)(nLayer[lTotal - 1]);
+			return sumSquaredError / (double)(nPerLayer[numL - 1]);
 		case MeanAbsoluteError:
 			double sumAbsoluteError = 0.0;
-			for (int i = 0; i < nLayer[lTotal - 1]; i++) {
-				sumAbsoluteError += Math.abs(a[lTotal - 1][i] - expectedOutput[i]);
+			for (int i = 0; i < nPerLayer[numL - 1]; i++) {
+				sumAbsoluteError += Math.abs(a[numL - 1][i] - expectedOutput[i]);
 			}
-			return sumAbsoluteError / (double)(nLayer[lTotal - 1]);
+			return sumAbsoluteError / (double)(nPerLayer[numL - 1]);
 		case CrossEntropy:
 			double totalCrossEntropyError = 0.0;
-			for (int i = 0; i < nLayer[lTotal -1]; i++) {
-				totalCrossEntropyError += expectedOutput[i]*Math.log(a[lTotal - 1][i]) + (1 - expectedOutput[i])*Math.log(1 - a[lTotal - 1][i]);
+			for (int i = 0; i < nPerLayer[numL -1]; i++) {
+				totalCrossEntropyError += expectedOutput[i]*Math.log(a[numL - 1][i]) + (1 - expectedOutput[i])*Math.log(1 - a[numL - 1][i]);
 			}
-			return -totalCrossEntropyError / (double)(nLayer[lTotal - 1]);
+			return -totalCrossEntropyError / (double)(nPerLayer[numL - 1]);
 		case BinaryCrossEntropy:
-			
-			break;
+			return 0.0;
 		default: 
 			System.out.println("Default switch thrown at network error calculation"); 
-			break;
+			return 0.0;
+		}
+	}
+	
+	/**
+	 * Perform one training iteration with three steps:
+	 * 	1. Input Data
+	 * 	2. Propagate
+	 * 	3. Backpropagation / Gradient Descent
+	 * 
+	 * @param trainData Data to be inputted
+	 * @param expectedOutput The expected result of the network
+	 * @return The weight-bias deltas generated by the gradient descent process
+	 */
+	public WeightBiasDeltaPackage performTrainAndGetDelta(double[] trainData, int expectedOutput) {
+		inputDataAndPropagate(trainData);
+		return gradientDescent(expectedOutput);
+	}
+	
+	/**
+	 * Perform one training batch consisting of many single training iterations whose weight-bias deltas are
+	 * summed and applied in one go. This is different than running many single training iterations by
+	 * themselves because deltas are not applied after every iteration.
+	 * 
+	 * Batch training is sometimes more efficient than 'online' training (applying deltas after each
+	 * iteration) operation-wise.
+	 * 
+	 * @param batchData Data to be inputted
+	 * @param expectedOutputs The expected results of the network per the batch data
+	 * @return The combined weight-bias deltas generated by the training iterations
+	 */
+	public WeightBiasDeltaPackage performBatchAndGetDelta(double[][] batchData, int[] expectedOutputs) {
+		int batchSize = batchData.length;
+		
+		WeightBiasDeltaPackage[] deltaPackages = new WeightBiasDeltaPackage[batchSize];
+		
+		for (int i = 0; i < batchSize; i++) {
+			deltaPackages[i] = performTrainAndGetDelta(batchData[i], expectedOutputs[i]);
 		}
 		
-		return 0.0;
+		return WeightBiasDeltaPackage.concatPackages(deltaPackages);
+	}
+	
+	/**
+	 * Perform an entire epoch of training. An epoch is when the network is trained through the entire data
+	 * set once. If batch training is not desired, a batchSize of one (1) can be specified. If batch training
+	 * is desired, the epoch trainer will split the training data into batches. Should the training data not 
+	 * divide evenly by the batch size, the last batch will have less training data than the previous ones.
+	 * 
+	 * @param trainingData Data to be inputted
+	 * @param expectedOutputs The expected results of the network per the training data
+	 * @param batchSize Size of the batches to be performed. 1 if batch training is not desired.
+	 */
+	public void performEpoch(double[][] trainingData, int[] expectedOutputs, int batchSize) {
+		//Translate numbers into readable variables for code readability
+		int numDataPoints = trainingData.length;
+		int numBatches = (int)Math.ceil(numDataPoints / batchSize);
+
+		
+		//Find the individual batch sizes (accounting for if num batches does not divide evenly into training data)
+		int[] batchSizes = new int[numBatches];
+		
+		if (numDataPoints % numBatches == 0) {
+			for (int i = 0; i < numBatches; i++) {
+				batchSizes[i] = batchSize;
+			}
+		} else {
+			for (int i = 0; i < numBatches - 1; i++) {
+				batchSizes[i] = batchSize;
+			}
+			
+			batchSizes[numBatches - 1] = numDataPoints - ((numBatches - 1) * batchSize);
+		}
+		
+		
+		//Find what chunk of data each batch will have
+		double[][][] batchDataSets = new double[numBatches][][];
+		int[][] batchExpectedOutputs = new int[numBatches][];
+		int nextBatchStartIndex = 0;
+		
+		for (int b = 0; b < numBatches; b++) {
+			batchDataSets[b] = ArrayUtil.clipArray(trainingData, nextBatchStartIndex, nextBatchStartIndex+batchSizes[b]);
+			batchExpectedOutputs[b] = ArrayUtil.clipArray(expectedOutputs, nextBatchStartIndex, nextBatchStartIndex+batchSizes[b]);
+			nextBatchStartIndex += batchSizes[b];
+		}
+		
+		
+		//Run each batch and apply deltas
+		for (int b = 0; b < numBatches; b++) {
+			System.out.println("Starting batch " + b);
+			applyDeltaPackage(performBatchAndGetDelta(batchDataSets[b], batchExpectedOutputs[b]));
+		}
 	}
 }

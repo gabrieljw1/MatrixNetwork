@@ -1,5 +1,7 @@
 package xyz.onerous.MatrixNetwork.util;
 
+import java.util.Arrays;
+
 public class ArrayUtil {
 	/**
 	 * Transfer a two-dimensional array [2D] into a one-dimensional array [1D] by concatenating each layer
@@ -28,9 +30,7 @@ public class ArrayUtil {
 	 * @param array The array to find the mean of
 	 * @return The array's mean
 	 */
-	public static double mean(int[] array) {
-		if (array.length == 0) { return (Double) null; }
-		
+	public static double mean(int[] array) {		
 		int sum = 0;
 		
 		for (int i : array) { sum += i; }
@@ -45,8 +45,6 @@ public class ArrayUtil {
 	 * @return The array's standard deviation
 	 */
 	public static double standardDeviation(int[] array) {
-		if (array.length == 0) { return (Double) null; }
-		
 		double variance = 0;
 		double mean = mean(array);
 		
@@ -74,6 +72,42 @@ public class ArrayUtil {
 		
 		for (int i = 0; i < returnArray.length; i++) {
 			returnArray[i] = ((double)array[i] - mean) / standardDeviation;
+		}
+		
+		return returnArray;
+	}
+	
+	/**
+	 * Clips an array to the desired range, first inclusive and out range exclusive.
+	 * 
+	 * @param array
+	 * @param startingIndex
+	 * @param endingIndex
+	 * @return
+	 */
+	public static double[][] clipArray(double[][] array, int startingIndex, int endingIndex) {
+		double[][] returnArray = new double[endingIndex - startingIndex][];
+		
+		for (int i = startingIndex; i < endingIndex; i++) {
+			returnArray[i - startingIndex] = array[i];
+		}
+		
+		return returnArray;
+	}
+	
+	/**
+	 * Clips an array to the desired range, first inclusive and out range exclusive.
+	 * 
+	 * @param array
+	 * @param startingIndex
+	 * @param endingIndex
+	 * @return
+	 */
+	public static int[] clipArray(int[] array, int startingIndex, int endingIndex) {
+		int[] returnArray = new int[endingIndex - startingIndex];
+		
+		for (int i = startingIndex; i < endingIndex; i++) {
+			returnArray[i - startingIndex] = array[i];
 		}
 		
 		return returnArray;
