@@ -1,7 +1,5 @@
 package xyz.onerous.MatrixNetwork.util;
 
-import java.util.Arrays;
-
 public class ArrayUtil {
 	/**
 	 * Transfer a two-dimensional array [2D] into a one-dimensional array [1D] by concatenating each layer
@@ -34,6 +32,20 @@ public class ArrayUtil {
 		int sum = 0;
 		
 		for (int i : array) { sum += i; }
+		
+		return (double)sum / (double)array.length;
+	}
+	
+	/**
+	 * Find the mean of a given array.
+	 * 
+	 * @param array The array to find the mean of
+	 * @return The array's mean
+	 */
+	public static double mean(double[] array) {		
+		double sum = 0;
+		
+		for (double i : array) { sum += i; }
 		
 		return (double)sum / (double)array.length;
 	}
@@ -108,6 +120,96 @@ public class ArrayUtil {
 		
 		for (int i = startingIndex; i < endingIndex; i++) {
 			returnArray[i - startingIndex] = array[i];
+		}
+		
+		return returnArray;
+	}
+	
+	/**
+	 * Generate the max of a set of doubles.
+	 * 
+	 * @param values
+	 * @return
+	 */
+	public static double max(double[] values) {		
+		double maxValue = values[0];
+		
+		for (double value : values) {
+			if (value > maxValue) {
+				maxValue = value;
+			}
+		}
+		
+		return maxValue;
+	}
+	
+	/**
+	 * Generate the min of a set of doubles.
+	 * 
+	 * @param values
+	 * @return
+	 */
+	public static double min(double[] values) {
+		double minValue = 0;
+		
+		for (double value : values) {
+			if (value < minValue) {
+				minValue = value;
+			}
+		}
+		
+		return minValue;
+	}
+	
+	/**
+	 * Generate the standard deviation of a set of doubles.
+	 * 
+	 * @param values
+	 * @return
+	 */
+	public static double standardDeviation(double[] values) {
+		double preStandardDeviation = 0;
+		double mean = mean(values);
+		
+		for (int i = 0; i < values.length; i++)
+		{
+		    preStandardDeviation += Math.pow(values[i] - mean, 2) / values.length;
+		}
+		
+		return Math.sqrt(preStandardDeviation);
+	}
+	
+	/**
+	 * Generate the range of a set of doubles.
+	 * 
+	 * @param values
+	 * @return
+	 */
+	public static double range(double[] values) {
+		return max(values) - min(values);
+	}
+	
+	public static double[] rangeTranslation(double[] values, double min, double max) {
+		double currentMin = min(values);
+		double currentMax = max(values);
+		
+		double currentRange = currentMax - currentMin;
+		double targetRange = max - min;
+		
+		double[] translatedArray = new double[values.length];
+		
+		for (int i = 0; i < values.length; i++) {
+			translatedArray[i] = ((values[i] - currentMin) / currentRange) * targetRange + min;
+		}
+		
+		return translatedArray;
+	}
+	
+	public static int[] doubleToInt(double[] array) {
+		int[] returnArray = new int[array.length];
+		
+		for (int i = 0; i < array.length; i++) {
+			returnArray[i] = (int) array[i];
 		}
 		
 		return returnArray;

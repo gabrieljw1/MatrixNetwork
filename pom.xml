@@ -4,7 +4,7 @@
 
   <groupId>Onerous</groupId>
   <artifactId>MatrixNetwork</artifactId>
-  <version>0.0.1</version>
+  <version>0.2.0</version>
   <packaging>jar</packaging>
 
   <name>MatrixNetwork</name>
@@ -22,4 +22,5 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <description>A feedforward neural network using stochastic gradient descent written entirely in Java by Gabriel Wong.</description>
 </project>

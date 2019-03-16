@@ -2,10 +2,14 @@ package xyz.onerous.MatrixNetwork;
 
 import java.util.Random;
 
-import xyz.onerous.MatrixNetwork.ActivationType;
-import xyz.onerous.MatrixNetwork.LossType;
+import xyz.onerous.MatrixNetwork.component.ActivationType;
+import xyz.onerous.MatrixNetwork.component.LossType;
+import xyz.onerous.MatrixNetwork.component.datapackage.NetworkDataPackage;
+import xyz.onerous.MatrixNetwork.component.datapackage.TestResultPackage;
+import xyz.onerous.MatrixNetwork.component.datapackage.WeightBiasDeltaPackage;
 import xyz.onerous.MatrixNetwork.util.ArrayUtil;
 import xyz.onerous.MatrixNetwork.util.MatrixUtil;
+import xyz.onerous.MatrixNetwork.visualizer.Visualizer;
 
 /**
  * A neural network using Matrix operations instead of thrice-nested for loops like my first network did.
@@ -14,15 +18,13 @@ import xyz.onerous.MatrixNetwork.util.MatrixUtil;
  * type (Cross Entropy, MSE, etc.).
  * 
  * Notes:
- * 	- Neuron Activations [0, 1]
+ * 	- Neuron Activations [0, 1] for all activations but TanH which is [-1, 1]
  * 
  * To-do:
- * 	- //TODO: Translate TanH so that it fits on the interval [0,1]
  * 	- //TODO: Graphics?
- * 	- //TODO: Softmax support
  * 
  * @author wongg19
- * @version 0.1.0
+ * @version 0.2.0
  */
 public class MatrixNetwork {
 	private int[] nPerLayer; //Number of neurons in each layer
@@ -30,6 +32,7 @@ public class MatrixNetwork {
 	
 	private double learningRate; //Learning rate of the network
 	
+	private boolean usingSoftmax;
 	private ActivationType activationType; //Activation Type (Sigmoid, TanH, etc.)
 	private LossType lossType; //Loss Type (Cross Entropy, MSE, etc.)
 	
@@ -42,10 +45,11 @@ public class MatrixNetwork {
 	
 	private final double BIAS_INIT_CONSTANT = 0.0; //What biases should be initialized to
 	
-	public MatrixNetwork(int nInput, int nOutput, int[] nHidden, int lHidden, double learningRate, ActivationType activationType, LossType lossType) {
+	public MatrixNetwork(int nInput, int nOutput, int[] nHidden, int lHidden, double learningRate, boolean usingSoftmax, ActivationType activationType, LossType lossType) {
 		//Global all parameters
 		this.numL = lHidden + 2;
 		this.learningRate = learningRate;
+		this.usingSoftmax = usingSoftmax;
 		this.activationType = activationType;
 		this.lossType = lossType;
 		this.nPerLayer = new int[numL];
@@ -312,6 +316,32 @@ public class MatrixNetwork {
 		return layerA;
 	}
 	
+	public double[] softmaxLayer(double[] layerZ) {
+		double layerSum = 0.0;
+		double[] softmaxValues = new double[layerZ.length];
+		
+		for (double neuronZ : layerZ) {
+			layerSum += Math.exp(neuronZ);
+		}
+		
+		for (int i = 0; i < layerZ.length; i++) {
+			softmaxValues[i] = Math.exp(layerZ[i]) / layerSum;
+		}
+
+		return softmaxValues;
+	}
+	
+	public double[] softmaxLayerPrime(double[] layerZ) {
+		double[] softmaxPrimeValues = new double[layerZ.length];
+		double[] softmaxValues = softmaxLayer(layerZ);
+		
+		for (int i = 0; i < layerZ.length; i++) {
+			softmaxPrimeValues[i] = softmaxValues[i] * (1 - softmaxValues[i]);
+		}
+		
+		return softmaxPrimeValues;
+	}
+	
 	/**
 	 * Find the 'brightest' output neuron in the network. This is what amounts to the network's output.
 	 * 
@@ -331,6 +361,18 @@ public class MatrixNetwork {
 		return maxValueAtIndex;
 	}
 	
+	public int getNumL() {
+		return numL;
+	}
+	
+	public int[] getNPerLayer() {
+		return nPerLayer;
+	}
+	
+	public double getOutputNeuronValue(int index) {
+		return a[numL-1][index];
+	}
+	
 	/**
 	 * Feed forward the input given by the input data all the way to the output layer through the weights and
 	 * hidden layer neurons (if any).
@@ -339,9 +381,17 @@ public class MatrixNetwork {
 		//z will already be inside of the first layer array index
 		a[0] = activateLayer(z[0]);
 		
-		for (int l = 1; l < numL; l++) {
+		for (int l = 1; l < numL - 1; l++) {
 			z[l] = MatrixUtil.add(MatrixUtil.multiply(w[l], a[l-1]), b[l]);
 			a[l] = activateLayer(z[l]);
+		}
+		
+		z[numL-1] = MatrixUtil.add(MatrixUtil.multiply(w[numL-1], a[numL-2]), b[numL-1]);
+		
+		if (usingSoftmax) {
+			a[numL-1] = softmaxLayer(z[numL-1]);
+		} else {
+			a[numL-1] = activateLayer(z[numL-1]);
 		}
 	}
 	
@@ -369,6 +419,14 @@ public class MatrixNetwork {
 		
 		expectedOutput[expectedIndex] = 1.0;
 		
+		if (activationType == ActivationType.TanH) {
+			for (int i = 0; i < expectedOutput.length; i++) {
+				if (i != expectedIndex) {
+					expectedOutput[i] = -1.0;
+				}
+			}
+		}
+	
 		switch (lossType) {
 		case MeanSquaredError: //  (actual - predicted)^2 / n    so the deriv is    (2/n)(actual-predicted)
 			for (int i = 0; i < nPerLayer[numL - 1]; i++) {
@@ -402,7 +460,11 @@ public class MatrixNetwork {
 		
 		//Up until now, only part of δ has been stored inside.
 		//We still have to hadamard the delCdelA with the derivative of the activation function for z.
-		δ[numL-1] = MatrixUtil.hadamard(δ[numL-1], activateLayerPrime(z[numL - 1]));
+		if (usingSoftmax) {
+			δ[numL-1] = MatrixUtil.hadamard(δ[numL-1], softmaxLayerPrime(z[numL - 1]));
+		} else {
+			δ[numL-1] = MatrixUtil.hadamard(δ[numL-1], activateLayerPrime(z[numL - 1]));
+		}
 		
 		
 		//
@@ -426,7 +488,7 @@ public class MatrixNetwork {
 	 * @param expectedIndex The expected network output
 	 * @return the bias and weight deltas
 	 */
-	private WeightBiasDeltaPackage gradientDescent(int expectedIndex) { //Batch size needed to limit weight/bias changing over an entire batch
+	public WeightBiasDeltaPackage gradientDescent(int expectedIndex) { //Batch size needed to limit weight/bias changing over an entire batch
 		backPropagate(expectedIndex);
 		
 		double[][][] deltaW = w.clone(); //Cloned so the dimensions are the same without having to re-init.
@@ -477,9 +539,9 @@ public class MatrixNetwork {
 		case CrossEntropy:
 			double totalCrossEntropyError = 0.0;
 			for (int i = 0; i < nPerLayer[numL -1]; i++) {
-				totalCrossEntropyError += expectedOutput[i]*Math.log(a[numL - 1][i]) + (1 - expectedOutput[i])*Math.log(1 - a[numL - 1][i]);
+				totalCrossEntropyError += expectedOutput[i]*Math.log(a[numL - 1][i]);
 			}
-			return -totalCrossEntropyError / (double)(nPerLayer[numL - 1]);
+			return -totalCrossEntropyError;
 		case BinaryCrossEntropy:
 			return 0.0;
 		default: 
@@ -576,5 +638,39 @@ public class MatrixNetwork {
 			System.out.println("Starting batch " + b);
 			applyDeltaPackage(performBatchAndGetDelta(batchDataSets[b], batchExpectedOutputs[b]));
 		}
+	}
+	
+	public TestResultPackage performTest(double[][] testData, int[] expectedOutputs) {
+		if (testData.length != expectedOutputs.length) { return (TestResultPackage) null; }
+		
+		int numTests = testData.length;
+		int correctCount = 0;
+		
+		double[]  outputNeuronValues = new double[numTests];
+		int[]     outputNeuronIndeces = new int[numTests];
+		boolean[] ifCorrect = new boolean[numTests];
+		
+		for (int t = 0; t < numTests; t++) {
+			int outputIndex = inputDataAndPropagate(testData[t]);
+			if (outputIndex == expectedOutputs[t]) { 
+				correctCount++; 
+				ifCorrect[t] = true;
+			} else {
+				ifCorrect[t] = false;
+			}
+			
+			outputNeuronValues[t] = getOutputNeuronValue(outputIndex); 
+			outputNeuronIndeces[t] = outputIndex;
+		}
+		
+		double percentageCorrect = (double)correctCount / (double)numTests;
+		
+		return new TestResultPackage(numTests, percentageCorrect, outputNeuronValues, outputNeuronIndeces, ifCorrect);
+	}
+	
+	public NetworkDataPackage generateNetworkDataPackage() {
+		System.out.println("Network output: " + getDominantOutputIndex());
+		
+		return new NetworkDataPackage(getDominantOutputIndex(), a, z, b, w);
 	}
 }

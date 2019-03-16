@@ -3,52 +3,55 @@ package xyz.onerous.MatrixNetwork.MNIST;
 import java.util.List;
 
 import xyz.onerous.MatrixNetwork.MatrixNetwork;
-import xyz.onerous.MatrixNetwork.ActivationType;
-import xyz.onerous.MatrixNetwork.LossType;
 import xyz.onerous.MatrixNetwork.MNIST.MnistReader;
+import xyz.onerous.MatrixNetwork.component.ActivationType;
+import xyz.onerous.MatrixNetwork.component.LossType;
+import xyz.onerous.MatrixNetwork.component.datapackage.TestResultPackage;
 import xyz.onerous.MatrixNetwork.util.ArrayUtil;
 
 public class MnistAgent {
 	private List<int[][]> images;
-	private int[] labels;
+	protected int[] labels;
 	private List<int[][]> testImages;
-	private int[] testLabels;
+	protected int[] testLabels;
 	
-	private double[][] imageData;
-	private double[][] testImageData;
+	protected double[][] imageData;
+	protected double[][] testImageData;
 	
-	private MatrixNetwork matrixNetwork;
+	protected MatrixNetwork matrixNetwork;
 	
-	private static final String imagesFilePath = "./src/main/resources/train-images.idx3-ubyte";
-	private static final String labelsFilePath = "./src/main/resources/train-labels.idx1-ubyte";
-	private static final String testImagesFilePath = "./src/main/resources/t10k-images.idx3-ubyte";
-	private static final String testLabelsFilePath = "./src/main/resources/t10k-labels.idx1-ubyte";
+	private static final String IMAGES_FILE_PATH = "./src/main/resources/train-images.idx3-ubyte";
+	private static final String LABELS_FILE_PATH = "./src/main/resources/train-labels.idx1-ubyte";
+	private static final String TEST_IMAGES_FILE_PATH = "./src/main/resources/t10k-images.idx3-ubyte";
+	private static final String TEST_LABELS_FILE_PATH = "./src/main/resources/t10k-labels.idx1-ubyte";
 	
-	private static final int lHidden = 1;
-	private static final int[] nHidden = new int[] { 800 };
-	private static final int nOutput = 10;
+	private final int lHidden = 2;
+	private final int[] nHidden = new int[] { 500, 500 };
 	
-	private static final double learningRate = 0.001;
-	private static final ActivationType activationType = ActivationType.Sigmoid;
-	private static final LossType lossType = LossType.CrossEntropy;
+	private final double learningRate = 0.001;
+	private final boolean usingSoftmax = true;
+	private final ActivationType activationType = ActivationType.Sigmoid;
+	private final LossType lossType = LossType.CrossEntropy;
 	
-	public MnistAgent(String imagesFilePath, String labelsFilePath) {
-		this.images = MnistReader.getImages(imagesFilePath);
-		this.labels = MnistReader.getLabels(labelsFilePath);
-		this.testImages = MnistReader.getImages(testImagesFilePath);
-		this.testLabels = MnistReader.getLabels(testLabelsFilePath);
-		
-		
-		if (images.size() == 0 || labels.length == 0 || lHidden != nHidden.length) { return; }
-		
-		int nInput = images.get(0).length * images.get(0)[0].length;
-		
-		this.matrixNetwork = new MatrixNetwork(nInput, nOutput, nHidden, lHidden, learningRate, activationType, lossType);
+	public MnistAgent() {
+		this.images = MnistReader.getImages(IMAGES_FILE_PATH);
+		this.labels = MnistReader.getLabels(LABELS_FILE_PATH);
+		this.testImages = MnistReader.getImages(TEST_IMAGES_FILE_PATH);
+		this.testLabels = MnistReader.getLabels(TEST_LABELS_FILE_PATH);
 		
 		processImageData();
+		
+		if (images.size() == 0 || labels.length == 0 || lHidden != nHidden.length) { return; }
 	}
 	
-	private void processImageData() {
+	public void generateNetwork() {
+		int nInput = imageData[0].length;
+		int nOutput = 10;
+		
+		this.matrixNetwork = new MatrixNetwork(nInput, nOutput, nHidden, lHidden, learningRate, usingSoftmax, activationType, lossType);
+	}
+	
+	protected void processImageData() {
 		imageData = new double[images.size()][];
 		testImageData = new double[testImages.size()][];
 		
@@ -61,32 +64,23 @@ public class MnistAgent {
 		}
 	}
 	
-	private void performEpoch(int batchSize) {
+	public void performEpoch(int batchSize) {
 		matrixNetwork.performEpoch(imageData, labels, batchSize);
 	}
 	
-	private double performTest(int startIndex, int endIndex) {
-		if (startIndex < 0 || endIndex > testImages.size() || startIndex >= endIndex) { return -1; }
+	public TestResultPackage performTest(int startIndex, int endIndex) {
+		if (startIndex < 0 || endIndex > testImages.size() || startIndex >= endIndex) { return (TestResultPackage) null; }
 		
-		int correctCount = 0;
+		TestResultPackage testResults = matrixNetwork.performTest(ArrayUtil.clipArray(testImageData, startIndex, endIndex), ArrayUtil.clipArray(testLabels, startIndex, endIndex));
 		
-		for (int i = startIndex; i < endIndex; i++) {
-			int outputIndex = matrixNetwork.inputDataAndPropagate(testImageData[i]);
-			
-			System.out.println("Begin test: " + i);
-			System.out.println("Network Gave: " + outputIndex + ", but supposed to be: " + testLabels[i]);
-			System.out.println("");
-			
-			if (outputIndex == testLabels[i]) { correctCount++; }
-		}
-		
-		return 100.0 * (double)correctCount / (double)(endIndex-startIndex);
+		return testResults;
 	}
 	
 	public static void main(String[] args) {
-		MnistAgent mnistAgent = new MnistAgent(imagesFilePath, labelsFilePath);
+		MnistAgent mnistAgent = new MnistAgent();
 		
-		mnistAgent.performEpoch(50);
-		System.out.println("Got " + mnistAgent.performTest(0, 200) + "% Correct!");
+		mnistAgent.generateNetwork();
+		mnistAgent.performEpoch(10);
+		System.out.println(mnistAgent.performTest(0, 500));
 	}
 }
