@@ -6,6 +6,8 @@ This repository is the version control hub for the java Matrix Network project. 
 
 ## Release History
 
+* 0.3.0
+    * Begin Visualizer Integration
 * 0.2.0
     * Batch, epoch training support
     * Efficiency increased
