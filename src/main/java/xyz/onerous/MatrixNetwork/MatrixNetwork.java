@@ -1,5 +1,8 @@
 package xyz.onerous.MatrixNetwork;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.util.Arrays;
 import java.util.Random;
 
 import xyz.onerous.MatrixNetwork.component.ActivationType;
@@ -7,6 +10,8 @@ import xyz.onerous.MatrixNetwork.component.LossType;
 import xyz.onerous.MatrixNetwork.component.datapackage.NetworkDataPackage;
 import xyz.onerous.MatrixNetwork.component.datapackage.TestResultPackage;
 import xyz.onerous.MatrixNetwork.component.datapackage.WeightBiasDeltaPackage;
+import xyz.onerous.MatrixNetwork.exception.ArrayNotSquareException;
+import xyz.onerous.MatrixNetwork.exception.InvalidInputLengthException;
 import xyz.onerous.MatrixNetwork.util.ArrayUtil;
 import xyz.onerous.MatrixNetwork.util.MatrixUtil;
 import xyz.onerous.MatrixNetwork.visualizer.Visualizer;
@@ -27,21 +32,21 @@ import xyz.onerous.MatrixNetwork.visualizer.Visualizer;
  * @version 0.2.0
  */
 public class MatrixNetwork {
-	private int[] nPerLayer; //Number of neurons in each layer
-	private int numL; //Number of layers (including input, output) in network
+	protected int[] nPerLayer; //Number of neurons in each layer
+	protected int numL; //Number of layers (including input, output) in network
 	
-	private double learningRate; //Learning rate of the network
+	protected double learningRate; //Learning rate of the network
 	
-	private boolean usingSoftmax;
-	private ActivationType activationType; //Activation Type (Sigmoid, TanH, etc.)
-	private LossType lossType; //Loss Type (Cross Entropy, MSE, etc.)
+	protected boolean usingSoftmax;
+	protected ActivationType activationType; //Activation Type (Sigmoid, TanH, etc.)
+	protected LossType lossType; //Loss Type (Cross Entropy, MSE, etc.)
 	
-	private double[][][] w; //Connection Weights
-	private double[][] b; //Neuron Biases
-	private double[][] z; //Neuron Weighted Inputs
-	private double[][] a; //Neuron Activations
+	protected double[][][] w; //Connection Weights
+	protected double[][] b; //Neuron Biases
+	protected double[][] z; //Neuron Weighted Inputs
+	protected double[][] a; //Neuron Activations
 	
-	private double[][] δ; //Network error per neuron used for gradient descent
+	protected double[][] δ; //Network error per neuron used for gradient descent
 	
 	private final double BIAS_INIT_CONSTANT = 0.0; //What biases should be initialized to
 	
@@ -139,15 +144,16 @@ public class MatrixNetwork {
 			break;
 		}
 	}
-
+	
 	/**
 	 * Take an array of doubles and spread that across the input layer of the network
 	 * 
 	 * @param data Array of length number of input neurons in the network
+	 * @throws InvalidInputLengthException 
 	 */
-	private void inputData(double[] data) {
+	private void inputData(double[] data) throws InvalidInputLengthException {
 		if (data.length != nPerLayer[0]) {
-			System.out.println("Data length mismatch error");
+			throw new InvalidInputLengthException();
 		}
 		
 		z[0] = data;
@@ -161,7 +167,11 @@ public class MatrixNetwork {
 	 * @return Network response (index of 'brightest' output neuron)
 	 */
 	public int inputDataAndPropagate(double[] data) {
-		inputData(data);
+		try {
+			inputData(data);
+		} catch (InvalidInputLengthException e) {
+			e.printStackTrace();
+		}
 		
 		propagate();
 		
@@ -413,7 +423,7 @@ public class MatrixNetwork {
 	 * 
 	 * @param expectedIndex The expected output of the network
 	 */
-	private void backPropagate(int expectedIndex) {
+	protected void backPropagate(int expectedIndex) {
 		//CALCULATE OUTPUT LAYER FIRST
 		double[] expectedOutput = new double[nPerLayer[numL - 1]];
 		
@@ -601,7 +611,7 @@ public class MatrixNetwork {
 	 */
 	public void performEpoch(double[][] trainingData, int[] expectedOutputs, int batchSize) {
 		//Translate numbers into readable variables for code readability
-		int numDataPoints = trainingData.length;
+		int numDataPoints = trainingData.length - 50000;
 		int numBatches = (int)Math.ceil(numDataPoints / batchSize);
 
 		

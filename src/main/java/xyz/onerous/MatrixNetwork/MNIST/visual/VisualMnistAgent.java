@@ -1,18 +1,16 @@
-package xyz.onerous.MatrixNetwork.visualizer;
+package xyz.onerous.MatrixNetwork.MNIST.visual;
 
 import java.util.Arrays;
 
 import xyz.onerous.MatrixNetwork.MatrixNetwork;
 import xyz.onerous.MatrixNetwork.MNIST.MnistAgent;
-import xyz.onerous.MatrixNetwork.MNIST.VisualMatrixNetwork;
 import xyz.onerous.MatrixNetwork.component.ActivationType;
 import xyz.onerous.MatrixNetwork.component.LossType;
 import xyz.onerous.MatrixNetwork.component.datapackage.WeightBiasDeltaPackage;
 import xyz.onerous.MatrixNetwork.util.ArrayUtil;
+import xyz.onerous.MatrixNetwork.visualizer.Visualizer;
 
 public class VisualMnistAgent extends MnistAgent {
-	private Visualizer visualizer;
-	
 	private final int lHidden = 2;
 	private final int[] nHidden = new int[] { 500, 500 };
 	

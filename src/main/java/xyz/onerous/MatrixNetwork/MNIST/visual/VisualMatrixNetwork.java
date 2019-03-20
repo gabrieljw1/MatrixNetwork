@@ -1,4 +1,4 @@
-package xyz.onerous.MatrixNetwork.MNIST;
+package xyz.onerous.MatrixNetwork.MNIST.visual;
 
 import xyz.onerous.MatrixNetwork.MatrixNetwork;
 import xyz.onerous.MatrixNetwork.component.ActivationType;

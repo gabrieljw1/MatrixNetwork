@@ -20,18 +20,18 @@ public class MnistAgent {
 	
 	protected MatrixNetwork matrixNetwork;
 	
-	private static final String IMAGES_FILE_PATH = "./src/main/resources/train-images.idx3-ubyte";
-	private static final String LABELS_FILE_PATH = "./src/main/resources/train-labels.idx1-ubyte";
-	private static final String TEST_IMAGES_FILE_PATH = "./src/main/resources/t10k-images.idx3-ubyte";
-	private static final String TEST_LABELS_FILE_PATH = "./src/main/resources/t10k-labels.idx1-ubyte";
+	protected static final String IMAGES_FILE_PATH = "./src/main/resources/train-images.idx3-ubyte";
+	protected static final String LABELS_FILE_PATH = "./src/main/resources/train-labels.idx1-ubyte";
+	protected static final String TEST_IMAGES_FILE_PATH = "./src/main/resources/t10k-images.idx3-ubyte";
+	protected static final String TEST_LABELS_FILE_PATH = "./src/main/resources/t10k-labels.idx1-ubyte";
 	
-	private final int lHidden = 2;
-	private final int[] nHidden = new int[] { 500, 500 };
+	protected final int lHidden = 2;
+	protected final int[] nHidden = new int[] { 500, 500 };
 	
-	private final double learningRate = 0.001;
-	private final boolean usingSoftmax = true;
-	private final ActivationType activationType = ActivationType.Sigmoid;
-	private final LossType lossType = LossType.CrossEntropy;
+	protected final double learningRate = 0.001;
+	protected final boolean usingSoftmax = true;
+	protected final ActivationType activationType = ActivationType.Sigmoid;
+	protected final LossType lossType = LossType.CrossEntropy;
 	
 	public MnistAgent() {
 		this.images = MnistReader.getImages(IMAGES_FILE_PATH);
@@ -64,7 +64,7 @@ public class MnistAgent {
 		}
 	}
 	
-	public void performEpoch(int batchSize) {
+	public void performEpoch(int batchSize) {		
 		matrixNetwork.performEpoch(imageData, labels, batchSize);
 	}
 	
