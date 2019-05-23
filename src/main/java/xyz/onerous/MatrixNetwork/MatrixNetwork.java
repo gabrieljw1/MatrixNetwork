@@ -8,12 +8,13 @@ import java.util.Random;
 import xyz.onerous.MatrixNetwork.component.ActivationType;
 import xyz.onerous.MatrixNetwork.component.LossType;
 import xyz.onerous.MatrixNetwork.component.datapackage.NetworkDataPackage;
+import xyz.onerous.MatrixNetwork.component.datapackage.NetworkWeightBiasPackage;
 import xyz.onerous.MatrixNetwork.component.datapackage.TestResultPackage;
 import xyz.onerous.MatrixNetwork.component.datapackage.WeightBiasDeltaPackage;
-import xyz.onerous.MatrixNetwork.exception.ArrayNotSquareException;
-import xyz.onerous.MatrixNetwork.exception.InvalidInputLengthException;
-import xyz.onerous.MatrixNetwork.util.ArrayUtil;
-import xyz.onerous.MatrixNetwork.util.MatrixUtil;
+import xyz.onerous.MatrixNetwork.component.exception.ArrayNotSquareException;
+import xyz.onerous.MatrixNetwork.component.exception.InvalidInputLengthException;
+import xyz.onerous.MatrixNetwork.component.util.ArrayUtil;
+import xyz.onerous.MatrixNetwork.component.util.MatrixUtil;
 import xyz.onerous.MatrixNetwork.visualizer.Visualizer;
 
 /**
@@ -524,6 +525,24 @@ public class MatrixNetwork {
 		}
 	}
 	
+	public void applyNetworkWeightBiasPackage(NetworkWeightBiasPackage networkWeightBiasPackage) {
+		try {
+			if (w.length != networkWeightBiasPackage.getConnectionWeights().length 
+					|| w[1].length != networkWeightBiasPackage.getConnectionWeights()[1].length
+					|| w[1][0].length != networkWeightBiasPackage.getConnectionWeights()[1][0].length
+					|| b.length != networkWeightBiasPackage.getNeuronBiases().length
+					|| b[0].length != networkWeightBiasPackage.getNeuronBiases()[0].length) {
+				
+				throw new InvalidInputLengthException();
+			}
+			
+			w = networkWeightBiasPackage.getConnectionWeights();
+			b = networkWeightBiasPackage.getNeuronBiases();
+		} catch (InvalidInputLengthException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	/**
 	 * @param expectedIndex The expected output of the network
 	 * @return the total output layer error specified by the selected loss function.
@@ -611,7 +630,7 @@ public class MatrixNetwork {
 	 */
 	public void performEpoch(double[][] trainingData, int[] expectedOutputs, int batchSize) {
 		//Translate numbers into readable variables for code readability
-		int numDataPoints = trainingData.length - 50000;
+		int numDataPoints = trainingData.length;
 		int numBatches = (int)Math.ceil(numDataPoints / batchSize);
 
 		
@@ -678,9 +697,11 @@ public class MatrixNetwork {
 		return new TestResultPackage(numTests, percentageCorrect, outputNeuronValues, outputNeuronIndeces, ifCorrect);
 	}
 	
+	public NetworkWeightBiasPackage generateNetworkWeightBiasPackage() {
+		return new NetworkWeightBiasPackage(b, w);
+	}
+	
 	public NetworkDataPackage generateNetworkDataPackage() {
-		System.out.println("Network output: " + getDominantOutputIndex());
-		
 		return new NetworkDataPackage(getDominantOutputIndex(), a, z, b, w);
 	}
 }

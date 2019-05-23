@@ -10,14 +10,11 @@ package xyz.onerous.MatrixNetwork.component.datapackage;
  * 
  * @author Gabriel Wong
  */
-public class NetworkDataPackage {
+public class NetworkDataPackage extends NetworkWeightBiasPackage {
 	private int networkResult;
 	
 	private double[][] a;
 	private double[][] z;
-	private double[][] b;
-	
-	private double[][][] w;
 	
 	//Getters for all variables.
 	public int getNetworkResult() {
@@ -28,12 +25,6 @@ public class NetworkDataPackage {
 	}
 	public double[][] getNeuronZs() {
 		return z;
-	}
-	public double[][] getNeuronBiases() {
-		return b;
-	}
-	public double[][][] getConnectionWeights() {
-		return w;
 	}
 	
 	/**
@@ -47,11 +38,11 @@ public class NetworkDataPackage {
 	 * @param connectionValues
 	 */
 	public NetworkDataPackage(int networkResult, double[][] neuronActivations, double[][] neuronZs, double[][] neuronBiases, double[][][] connectionWeights) {
+		super(neuronBiases, connectionWeights);
+		
 		this.networkResult = networkResult;
 		this.a = neuronActivations;
 		this.z = neuronZs;
-		this.b = neuronBiases;
-		this.w = connectionWeights;
 	}
 	
 	public double[][][] getConnectionValues() {

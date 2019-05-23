@@ -1,7 +1,7 @@
 package xyz.onerous.MatrixNetwork.component.datapackage;
 
-import xyz.onerous.MatrixNetwork.util.ArrayUtil;
-import xyz.onerous.MatrixNetwork.util.MatrixUtil;
+import xyz.onerous.MatrixNetwork.component.util.ArrayUtil;
+import xyz.onerous.MatrixNetwork.component.util.MatrixUtil;
 
 public class TestResultPackage {
 	public int    numTests;
@@ -20,13 +20,41 @@ public class TestResultPackage {
 		this.ifCorrect = ifCorrect;	
 	}
 	
+	private double correctAverageConfidenceLevel() {
+		double sum = 0;
+		int num = 0;
+		
+		for (int i = 0; i < ifCorrect.length; i++) {
+			if (ifCorrect[i]) { 
+				sum += outputNeuronValues[i]; 
+				num++;
+			}
+		}
+		
+		return sum / (double)num;
+	}
+	
+	private double incorrectAverageConfidenceLevel() {
+		double sum = 0;
+		int num = 0;
+		
+		for (int i = 0; i < ifCorrect.length; i++) {
+			if (!ifCorrect[i]) { 
+				sum += outputNeuronValues[i]; 
+				num++;
+			}
+		}
+		
+		return sum / (double)num;
+	}
+	
 	public String toString() {
 		String result = "|  Test  ||  Network Result  ||  Correct?    ||  Confidence\n";
 		
 		double[] percentageLevels = MatrixUtil.scalarMultiply(outputNeuronValues, 100);
 		
-		for (int t = 1; t < numTests; t++) {
-			String testNumber = t + "";
+		for (int t = 0; t < numTests; t++) {
+			String testNumber = t + 1 + "";
 			String networkResult;
 			
 			if (ifCorrect[t]) {
@@ -35,7 +63,7 @@ public class TestResultPackage {
 				networkResult = "incorrect";
 			}
 			
-			for (int i = (int)(Math.log10(t)+1); i < 3; i++) {
+			for (int i = (int)(Math.log10(t+1)+1); i < 3; i++) {
 				if (i < 0) { i = 1; }
 				
 				testNumber += " ";
@@ -47,6 +75,8 @@ public class TestResultPackage {
 		return result + "\n\nTest Results for ID (" + this.hashCode() + ")\n"
 				+ "  #Tests:   " + numTests + "\n"
 				+ "  %Correct: " + 100.0 * percentageCorrect + "%\n"
-				+ "  Average Confidence Level: " + ArrayUtil.mean(outputNeuronValues);
+				+ "  Average Confidence Level: " + ArrayUtil.mean(outputNeuronValues) + "%\n"
+				+ "  Correct AVG Conf Level: " + correctAverageConfidenceLevel() + "%\n"
+				+ "  Incorrect AVG Conf Lvl: " + incorrectAverageConfidenceLevel() + "%";
 	}
 }

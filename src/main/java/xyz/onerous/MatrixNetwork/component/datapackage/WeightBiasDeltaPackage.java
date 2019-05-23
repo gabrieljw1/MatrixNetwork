@@ -1,6 +1,6 @@
 package xyz.onerous.MatrixNetwork.component.datapackage;
 
-import xyz.onerous.MatrixNetwork.util.MatrixUtil;
+import xyz.onerous.MatrixNetwork.component.util.MatrixUtil;
 
 public class WeightBiasDeltaPackage {
 	public double[][][] deltaW;

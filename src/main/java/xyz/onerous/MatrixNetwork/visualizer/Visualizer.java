@@ -47,7 +47,7 @@ public class Visualizer {
 	}
 	
 	public void updateTrainingData(double[] pixelData, int expectedOutput) {
-		trainingDataFrame.displayTrainingData(pixelData, expectedOutput);
+		//trainingDataFrame.displayTrainingData(pixelData, expectedOutput);
 	}
 	
 	public void updateVisualizer(NetworkDataPackage networkDataPackage) {

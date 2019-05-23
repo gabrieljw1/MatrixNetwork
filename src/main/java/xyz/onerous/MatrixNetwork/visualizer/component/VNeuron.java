@@ -6,7 +6,7 @@ import java.awt.Graphics;
 
 import javax.swing.JComponent;
 
-import xyz.onerous.MatrixNetwork.util.MathUtil;
+import xyz.onerous.MatrixNetwork.component.util.MathUtil;
 
 /**
  * A class that represents a Neuron visually. It stores the position of the Neuron as well as it's value and

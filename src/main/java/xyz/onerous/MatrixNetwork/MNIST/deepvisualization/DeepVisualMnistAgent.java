@@ -2,25 +2,20 @@ package xyz.onerous.MatrixNetwork.MNIST.deepvisualization;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import xyz.onerous.MatrixNetwork.MNIST.MnistAgent;
-import xyz.onerous.MatrixNetwork.visualizer.frame.TrainingDataFrame;
 
 public class DeepVisualMnistAgent extends MnistAgent {
 	protected DeepVisualMatrixNetwork matrixNetwork;
 	
 	public DeepVisualMnistAgent() {
 		super();
-		
-		generateNetwork();
 	}
 	
 	@Override public void generateNetwork() {
@@ -28,10 +23,8 @@ public class DeepVisualMnistAgent extends MnistAgent {
 		int nOutput = 10;
 		
 		this.matrixNetwork = new DeepVisualMatrixNetwork(nInput, nOutput, nHidden, lHidden, learningRate, usingSoftmax, activationType, lossType);
-	}
-	
-	@Override public void performEpoch(int batchSize) {		
-		matrixNetwork.performEpoch(imageData, labels, batchSize);
+		
+		super.matrixNetwork = matrixNetwork;
 	}
 	
 	private BufferedImage generateDeepNetworkVisual(int expectedOutput, int numberOfTrains) {
@@ -47,12 +40,19 @@ public class DeepVisualMnistAgent extends MnistAgent {
 	}
 	
 	public static void main(String[] args) {
-		DeepVisualMnistAgent agent = new DeepVisualMnistAgent();
+		DeepVisualMnistAgent agent = new DeepVisualMnistAgent();		
 		
-		agent.performEpoch(50);
+		agent.generateNetwork();
 		
-		BufferedImage visual = agent.generateDeepNetworkVisual(0, 100);
+		agent.loadNetwork("1");
 		
+		BufferedImage initVisual = agent.generateDeepNetworkVisual(1, 0);
+		agent.displayDeepNetworkVisual(initVisual);
+		
+		System.out.println("Generating...");
+		BufferedImage visual = agent.generateDeepNetworkVisual(1, 10000);
+		
+		System.out.println("Displaying...");
 		agent.displayDeepNetworkVisual(visual);
 	}
 	

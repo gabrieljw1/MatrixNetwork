@@ -7,7 +7,7 @@ import java.awt.Graphics2D;
 
 import javax.swing.JComponent;
 
-import xyz.onerous.MatrixNetwork.util.MathUtil;
+import xyz.onerous.MatrixNetwork.component.util.MathUtil;
 
 /**
  * A class that represents a Connection visually. It stores the two endpoints of the connection's line as
@@ -21,8 +21,8 @@ public class VConnection extends JComponent {
 
 	//Visuals. Floor and Ceil for color computation.
 	private static final int CONNECTION_SIZE = 3;
-	private static final double CONNECTION_VALUE_FLOOR = -1.0;
-	private static final double CONNECTION_VALUE_CEIL = 1.0;
+	private static final double CONNECTION_VALUE_FLOOR = -0.001;
+	private static final double CONNECTION_VALUE_CEIL = 0.001;
 
 	//Variables
 	private double weight;
@@ -36,7 +36,14 @@ public class VConnection extends JComponent {
 	
 	//Setters
 	public void setValue(double value) { this.value = value; }
-	public void setWeight(double weight) { this.weight = weight; setColor( Color.getHSBColor( (float)MathUtil.mapDoubleToRange(this.getWeight(), CONNECTION_VALUE_FLOOR, CONNECTION_VALUE_CEIL, 0, (float)128/360) , 1, 1) ); repaint();  }
+	
+	public void setWeight(double weight) { 
+		this.weight = weight; 
+		setColor( Color.getHSBColor( (float)MathUtil.mapDoubleToRange(this.getWeight(), CONNECTION_VALUE_FLOOR, CONNECTION_VALUE_CEIL, 0, (float)128/360) , 1, 1) ); 
+		repaint();  
+		System.out.println(weight);
+	}
+	
 	public void setColor(Color color) { this.color = color; }
 	
 	/**

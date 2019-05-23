@@ -7,7 +7,8 @@ import xyz.onerous.MatrixNetwork.MNIST.MnistAgent;
 import xyz.onerous.MatrixNetwork.component.ActivationType;
 import xyz.onerous.MatrixNetwork.component.LossType;
 import xyz.onerous.MatrixNetwork.component.datapackage.WeightBiasDeltaPackage;
-import xyz.onerous.MatrixNetwork.util.ArrayUtil;
+import xyz.onerous.MatrixNetwork.component.util.ArrayUtil;
+import xyz.onerous.MatrixNetwork.visualizer.VisualMatrixNetwork;
 import xyz.onerous.MatrixNetwork.visualizer.Visualizer;
 
 public class VisualMnistAgent extends MnistAgent {

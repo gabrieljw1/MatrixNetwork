@@ -7,7 +7,8 @@ import xyz.onerous.MatrixNetwork.MNIST.MnistReader;
 import xyz.onerous.MatrixNetwork.component.ActivationType;
 import xyz.onerous.MatrixNetwork.component.LossType;
 import xyz.onerous.MatrixNetwork.component.datapackage.TestResultPackage;
-import xyz.onerous.MatrixNetwork.util.ArrayUtil;
+import xyz.onerous.MatrixNetwork.component.util.ArrayUtil;
+import xyz.onerous.MatrixNetwork.component.util.FileUtil;
 
 public class MnistAgent {
 	private List<int[][]> images;
@@ -18,15 +19,15 @@ public class MnistAgent {
 	protected double[][] imageData;
 	protected double[][] testImageData;
 	
-	protected MatrixNetwork matrixNetwork;
+	public MatrixNetwork matrixNetwork;
 	
 	protected static final String IMAGES_FILE_PATH = "./src/main/resources/train-images.idx3-ubyte";
 	protected static final String LABELS_FILE_PATH = "./src/main/resources/train-labels.idx1-ubyte";
 	protected static final String TEST_IMAGES_FILE_PATH = "./src/main/resources/t10k-images.idx3-ubyte";
 	protected static final String TEST_LABELS_FILE_PATH = "./src/main/resources/t10k-labels.idx1-ubyte";
 	
-	protected final int lHidden = 2;
-	protected final int[] nHidden = new int[] { 500, 500 };
+	protected final int lHidden = 3;
+	protected final int[] nHidden = new int[] { 500, 500, 250 };
 	
 	protected final double learningRate = 0.001;
 	protected final boolean usingSoftmax = true;
@@ -76,11 +77,23 @@ public class MnistAgent {
 		return testResults;
 	}
 	
+	public void saveNetwork(String identifier) {
+		FileUtil.writeNetworkWeightBiasPackage(matrixNetwork.generateNetworkWeightBiasPackage(), "network" + identifier);
+	}
+	
+	public void loadNetwork(String identifier) {
+		matrixNetwork.applyNetworkWeightBiasPackage(FileUtil.loadNetworkWeightBiasPackage("network" + identifier));
+	}
+	
 	public static void main(String[] args) {
 		MnistAgent mnistAgent = new MnistAgent();
 		
 		mnistAgent.generateNetwork();
-		mnistAgent.performEpoch(10);
-		System.out.println(mnistAgent.performTest(0, 500));
+
+		mnistAgent.performEpoch(2);
+		
+		mnistAgent.saveNetwork("2");
+		
+		System.out.println(mnistAgent.performTest(0, 1500));
 	}
 }

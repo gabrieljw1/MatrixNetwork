@@ -8,11 +8,11 @@ import xyz.onerous.MatrixNetwork.MatrixNetwork;
 import xyz.onerous.MatrixNetwork.component.ActivationType;
 import xyz.onerous.MatrixNetwork.component.LossType;
 import xyz.onerous.MatrixNetwork.component.datapackage.NeuronInputDeltaPackage;
-import xyz.onerous.MatrixNetwork.exception.ArrayNotSquareException;
-import xyz.onerous.MatrixNetwork.util.MatrixUtil;
+import xyz.onerous.MatrixNetwork.component.exception.ArrayNotSquareException;
+import xyz.onerous.MatrixNetwork.component.util.MatrixUtil;
 
 public class DeepVisualMatrixNetwork extends MatrixNetwork {
-	private final double NEURON_INPUT_DELTA_RATE = 0.01; //Rate at which the input neuron Z changes
+	private final double NEURON_INPUT_DELTA_RATE = 1.0; //Rate at which the input neuron Z changes
 	
 	public DeepVisualMatrixNetwork(int nInput, int nOutput, int[] nHidden, int lHidden, double learningRate, boolean usingSoftmax, ActivationType activationType, LossType lossType) {
 		super(nInput, nOutput, nHidden, lHidden, learningRate, usingSoftmax, activationType, lossType);
@@ -29,29 +29,34 @@ public class DeepVisualMatrixNetwork extends MatrixNetwork {
 		BufferedImage outputImage = new BufferedImage(imageWidth, imageWidth, BufferedImage.TYPE_BYTE_GRAY);
 		WritableRaster raster = outputImage.getRaster();
 		
-		raster.setSamples(0, 0, imageWidth, imageWidth, 0, z[0]);
+		//We need to take the neuron array from [-1,1] -> [0, 255]
+		double[] dataArray = MatrixUtil.scalarMultiply(  MatrixUtil.scalarAdd(z[0], 1)  , 127.5);
+		
+		raster.setSamples(0, 0, imageWidth, imageWidth, 0, dataArray);
         
         return outputImage;
 	}
 	
-	private double[] generateRandomInputData() {
+	public double[] generateRandomInputData() {
 		Random random = new Random();
 		
 		double[] data = new double[z[0].length];
 		
-		for (double point : data) {
-			point = random.nextDouble();
+		for (int i = 0; i < data.length; i++) {
+			data[i] = -0.5;//random.nextDouble() * 2.0 - 1.0;
 		}
 		
 		return data;
 	}
 
 	private NeuronInputDeltaPackage gradientAscent(int expectedIndex) { //Batch size needed to limit weight/bias changing over an entire batch
+		propagate();
+		
 		backPropagate(expectedIndex);
 		
 		double[][] deltaZ = a.clone();
 		
-		deltaZ[0] = MatrixUtil.scalarMultiply(δ[0], NEURON_INPUT_DELTA_RATE);
+		deltaZ[0] = MatrixUtil.scalarMultiply(δ[0], Math.pow(this.getOutputError(expectedIndex), -1) * -NEURON_INPUT_DELTA_RATE);
 		
 		/*
 		for (int l = numL - 1; l > 0; l--) {
@@ -139,6 +144,8 @@ public class DeepVisualMatrixNetwork extends MatrixNetwork {
 		
 		for (int i = 0; i < numberOfTrains; i++) {
 			NeuronInputDeltaPackage neuronInputDeltaPackage = gradientAscent(expectedOutput);
+			
+			System.out.println(this.getOutputError(expectedOutput));
 			
 			applyInputDataDelta(neuronInputDeltaPackage);
 		}
