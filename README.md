@@ -1,3 +1,5 @@
+# This project is deprecated! See https://github.com/gabrieljw1/ModularNetwork 
+
 # Feedforward Neural Network with Matrices in Java
 > A feedforward neural network using stochastic gradient descent written entirely in Java by Gabriel Wong.
 
